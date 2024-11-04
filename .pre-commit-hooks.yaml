@@ -1,0 +1,7 @@
+- id: ploc
+  name: ploc
+  entry: ploc
+  description: "PLOC: Python Indirect Imports Chaser"
+  language: python
+  types: [python]
+  require_serial: true
