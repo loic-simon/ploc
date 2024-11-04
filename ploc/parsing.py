@@ -147,7 +147,6 @@ class _PlocTransformer(CSTTransformer):
 
         for index, alias in enumerate(names):
             name_import = _alias_to_name_import(alias, module_path)
-            print("trying to replace", name_import)
             if name_import and (repl := self._imports_changes.pop(name_import, None)):
                 assert (
                     repl.import_name == name_import.import_name

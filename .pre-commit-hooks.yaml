@@ -1,6 +1,7 @@
 - id: ploc
   name: ploc
   entry: ploc
+  args: [fix]
   description: "PLOC: Python Indirect Imports Chaser"
   language: python
   types: [python]

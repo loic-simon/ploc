@@ -4,10 +4,12 @@ from typing import Annotated, Literal
 
 import cyclopts
 from rich import print
+from rich.progress import track
 
 from ploc.analysis import analyse_module_imports, get_modules_interfaces, get_modules_locations
 from ploc.config import PlocConfig, config_from_pyproject, default_config, locate_pyproject
-from ploc.printing import report_replacements
+from ploc.parsing import replace_module_imports
+from ploc.printing import report_replacements, report_replacements_done
 
 ploc_app = cyclopts.App(name="ploc", help="Plic, plac? Plic, PLOC!")
 
@@ -26,16 +28,14 @@ def _get_config(dir: Path, config_file: Path | None) -> PlocConfig:
 
 @ploc_app.command()
 def check(
-    dir: Annotated[
+    *dirs: Annotated[
         Path,
         cyclopts.Parameter(
             help="The directory to analyse.",
             validator=cyclopts.validators.Path(exists=True, file_okay=False),
         ),
     ],
-    /,
-    *,
-    config_file: Annotated[
+    config: Annotated[
         Path | None,
         cyclopts.Parameter(
             help="The location of a pyproject.toml file containing tool config (in a [[tool.ploc]] table).",
@@ -50,12 +50,16 @@ def check(
     ] = "on",
 ) -> None:
     """Analyse indirect imports of a Python package."""
-    t1 = time()
-    config = _get_config(dir, config_file)
+    for dir in dirs:
+        t1 = time()
+        ploc_config = _get_config(dir, config)
 
-    replacements, files_count = analyse_module_imports(dir, config, cache)
-    t2 = time()
-    report_replacements(replacements, files_count, seconds=t2 - t1)
+        replacements, files_count = analyse_module_imports(dir, ploc_config, cache)
+        t2 = time()
+        report_replacements(replacements, files_count, seconds=t2 - t1)
+
+        if replacements:
+            raise SystemExit(1)
 
 
 @ploc_app.command()
@@ -75,6 +79,45 @@ def interface(
 
 
 @ploc_app.command()
-def fix(name: str, formal: bool = False) -> None:
+def fix(
+    *dirs: Annotated[
+        Path,
+        cyclopts.Parameter(
+            help="The directories to analyse & fix.",
+            validator=cyclopts.validators.Path(exists=True, file_okay=False),
+        ),
+    ],
+    config: Annotated[
+        Path | None,
+        cyclopts.Parameter(
+            help="The location of a pyproject.toml file containing tool config (in a [[tool.ploc]] table).",
+            validator=cyclopts.validators.Path(exists=True, dir_okay=False),
+        ),
+    ] = None,
+    cache: Annotated[
+        Literal["on", "off", "rebuild"],
+        cyclopts.Parameter(
+            help="Whether to cache modules interfaces between successive calls.",
+        ),
+    ] = "on",
+) -> None:
     """Reduce indirect imports of a Python package."""
-    raise NotImplementedError()
+    for dir in dirs:
+        ploc_config = _get_config(dir, config)
+
+        t1 = time()
+        replacements, files_count = analyse_module_imports(dir, ploc_config, cache)
+        t2 = time()
+
+        report_replacements(replacements, files_count, seconds=t2 - t1)
+
+        if not replacements:
+            raise SystemExit(0)  # success!
+
+        t3 = time()
+        for location, loc_replacements in track(replacements.items(), "Reducing imports..."):
+            replace_module_imports(location.file, loc_replacements)
+        t4 = time()
+
+        report_replacements_done(seconds=t4 - t3)
+        raise SystemExit(1)

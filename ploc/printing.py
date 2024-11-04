@@ -32,7 +32,9 @@ def format_name_imports(imps: Collection[NameImport]) -> list[str]:
 def report_replacements(
     replacements: Mapping[ModuleLocation, Mapping[NameImport, NameImport]], files_count: int, seconds: float
 ) -> None:
+    replacements_count = 0
     for location, module_repl in replacements.items():
+        replacements_count += len(module_repl)
         txt = Text(f"{location.file}:\n", Style(color="cyan"))
         for old in format_name_imports(module_repl.keys()):
             txt.append(f"  - {old}\n", Style(color="red"))
@@ -48,5 +50,7 @@ def report_replacements(
         )
     )
 
-    # if input("fix? (anything=yes) >"):
-    #     replace_module_imports(modules[module_path].file, replacements)
+
+def report_replacements_done(seconds: float) -> None:
+    print(Text(f"Indirect import(s) fixed in {seconds:.2}s.", Style(color="yellow")))
+    print(Text("You may want to run your formatter / import sorter!", Style(color="bright_black")))
