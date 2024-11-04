@@ -1,0 +1,18 @@
+[project]
+name = "ploc"
+version = "0.0.1"
+description = "Detect & remove indirect imports from Python projects"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "cyclopts>=2.9.9",
+    "libcst>=1.5.0",
+    "pydantic>=2.9.2",
+    "rich>=13.9.3",
+]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+
+[tool.ruff]
+line-length = 120
